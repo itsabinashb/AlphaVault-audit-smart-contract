@@ -1,6 +1,3 @@
-/**
- *Submitted for verification at Etherscan.io on 2022-11-11
- */
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
@@ -54,7 +51,75 @@ contract AlphaVaultSwap is Ownable {
         feePercentage = 5;
     }
 
-   
+    /**
+     * @dev method that handles transfer of ERC20 tokens to other address
+     * it assumes the calling address has approved this contract
+     * as spender
+     * @param amount numbers of token to transfer
+     */
+    function depositToken(IERC20 sellToken, uint256 amount) internal {
+        require(amount > 0);
+        ERC20Interface = IERC20(sellToken);
+        if (amount > ERC20Interface.allowance(msg.sender, address(this))) {
+            emit TransferFailed(msg.sender, address(this), amount);
+            revert();
+        }
+        bool success = ERC20Interface.transferFrom(msg.sender, address(this), amount);
+        require(success, "SWAP_CALL_FAILED");
+        emit TransferSuccessful(msg.sender, address(this), amount);
+    }
+
+    function setfeePercentage(uint256 num) external onlyOwner {
+        feePercentage = num;
+        emit feePercentageChange(feePercentage);
+    }
+
+    function setMaxTransactionLimit(uint256 num) external onlyOwner {
+        maxTransactions = num;
+        emit maxTransactionsChange(maxTransactions);
+    }
+
+    function withdrawFee(IERC20 token, uint256 amount) external {
+        require(token.transfer(msg.sender, amount));
+    }
+
+    // Transfer ETH held by this contrat to the sender/owner.
+    function withdrawETH(uint256 amount) external {
+        payable(msg.sender).transfer(amount);
+    }
+
+    // Payable fallback to allow this contract to receive protocol fee refunds.
+    receive() external payable {}
+
+    fallback() external payable {}
+
+    // Transfer tokens held by this contrat to the sender/owner.
+    function withdrawToken(IERC20 token, uint256 amount) internal {
+        require(token.transfer(msg.sender, amount));
+    }
+
+    //Sets destination address to msg.sender
+    function setDestination() internal returns (address) {
+        destination = msg.sender;
+        return destination;
+    }
+
+    // Transfer amount of ETH held by this contrat to the sender.
+    function transferEth(uint256 amount, address msgSender) internal {
+        payable(msgSender).transfer(amount);
+    }
+
+    function allowanceCheck(IERC20 sellToken, uint256 amount, address spender) internal {
+        ERC20Interface = IERC20(sellToken);
+        if(ERC20Interface.allowance(address(this),spender)<amount){
+            // Give `spender` an infinite allowance to spend this contract's `sellToken`.
+            // Note that for some tokens (e.g., USDT, KNC), you must first reset any existing
+            // allowance to 0 before being able to update it.
+            require(ERC20Interface.approve(spender, 0));
+            require(ERC20Interface.approve(spender, type(uint128).max));
+            emit maxAllowanceGiven(sellToken,type(uint128).max);
+        }
+    }
 
     // Swaps ERC20->ERC20 tokens held by this contract using a 0x-API quote.
     function fillQuote(
