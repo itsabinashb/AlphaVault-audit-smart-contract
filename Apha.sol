@@ -137,10 +137,11 @@ contract AlphaVaultSwap is Ownable {
             "Please provide a valid address"
         );
         // Track our balance of the buyToken to determine how much we've bought.
-        uint256 boughtAmount = buyToken.balanceOf(address(this));
-        (bool success, ) = swapTarget.call{value: 0}(swapCallData);
-        emit ZeroXCallSuccess(success, boughtAmount);
-        require(success, "SWAP_CALL_FAILED");
+        uint256 boughtAmount = IERC20(buyToken).balanceOf(address(this));  
+        //(bool success, ) = swapTarget.call{value: 0}(swapCallData);     // As u said swaps tokens , can u explain why did u use call method here?
+        //emit ZeroXCallSuccess(success, boughtAmount);
+        //require(success, "SWAP_CALL_FAILED");
+        IERC20(buyToken).transfer(swapTarget,boughtAmount); // sending token to target
         boughtAmount = buyToken.balanceOf(address(this)) - boughtAmount;
         emit buyTokenBought(boughtAmount);
         return boughtAmount;
